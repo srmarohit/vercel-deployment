@@ -7,43 +7,31 @@ const orderRouter = require("./router/orderRoute");
 
 const app = express();
 
+const isMongoDBConnected = false;
+
+async function connectToMongoDB() {
+  try {
+    await mongoose.connect(MONGO_URI);
+    isMongoDBConnected = true;
+    console.log("MongoDB connected");
+  } catch (err) {
+    isMongoDBConnected = false;
+    console.error("Failed to connect to MongoDB:", err.message);
+  }
+}
+
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  connectToMongoDB().catch((err) =>
+    console.error("Error connecting to MongoDB:", err),
+  );
+  next();
+});
+
 app.use(express.json());
 app.use("/api/orders", orderRouter);
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-async function startServer() {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log("MongoDB connected");
-
-    const server = app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
-    server.on("error", (err) => {
-      if (err.code === "EADDRINUSE") {
-        console.error(
-          `Port ${PORT} is already in use. Stop the other process or change PORT in .env.`,
-        );
-      } else {
-        console.error("Server error:", err);
-      }
-      process.exit(1);
-    });
-
-    // Graceful shutdown so restarts don't leave the port occupied
-    const shutdown = async () => {
-      await mongoose.disconnect();
-      server.close(() => process.exit(0));
-    };
-    process.on("SIGINT", shutdown);
-    process.on("SIGTERM", shutdown);
-  } catch (err) {
-    console.error("Failed to start server:", err.message);
-    process.exit(1);
-  }
-}
-
-startServer();
+module.exports = app;
