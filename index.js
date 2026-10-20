@@ -22,13 +22,18 @@ async function connectToMongoDB() {
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
-  connectToMongoDB().catch((err) =>
-    console.error("Error connecting to MongoDB:", err),
-  );
+  connectToMongoDB().catch((err) => {
+    console.error("Error connecting to MongoDB:", err);
+    res.status(500).send("Error connecting to MongoDB");
+  });
   next();
 });
 
 app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
 app.use("/api/orders", orderRouter);
 
 const PORT = process.env.PORT || 3000;
